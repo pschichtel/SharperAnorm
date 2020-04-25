@@ -18,7 +18,7 @@ namespace SharperAnorm
         public abstract TR Fold<TR>(Func<Exception, TR> onError, Func<T, TR> onSuccess);
     }
 
-    internal class RowParsterSuccess<T> : RowParserResult<T>
+    internal class RowParserSuccess<T> : RowParserResult<T>
     {
         public override T Value { get; }
 
@@ -27,7 +27,7 @@ namespace SharperAnorm
             get { return true; }
         }
 
-        public RowParsterSuccess(T value)
+        public RowParserSuccess(T value)
         {
             Value = value;
         }
@@ -39,7 +39,7 @@ namespace SharperAnorm
 
         public override RowParserResult<TR> Map<TR>(Func<T, TR> f)
         {
-            return new RowParsterSuccess<TR>(f(Value));
+            return new RowParserSuccess<TR>(f(Value));
         }
 
         public override TR Fold<TR>(Func<Exception, TR> onError, Func<T, TR> onSuccess)
@@ -87,7 +87,7 @@ namespace SharperAnorm
     {
         public static RowParserResult<T> Successful<T>(T value)
         {
-            return new RowParsterSuccess<T>(value);
+            return new RowParserSuccess<T>(value);
         }
 
         public static RowParserResult<T> Failed<T>(Exception error)
