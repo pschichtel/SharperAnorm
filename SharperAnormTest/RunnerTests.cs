@@ -41,5 +41,15 @@ namespace SharperAnormTest
             
             Assert.That(a, Is.EqualTo(6));
         }
+        
+        [Test]
+        public async Task NullBehavior()
+        {
+            var runner = new DataReaderRunner(async () => _connection, async (c) => { });
+
+            var result = await runner.RunSingle(Query.Plain("SELECT null"), Optional(Boolean(0)));
+            
+            Assert.That(result, Is.EqualTo(Maybe.Nothing<bool>()));
+        }
     }
 }

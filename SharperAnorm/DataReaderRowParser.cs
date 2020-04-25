@@ -10,6 +10,19 @@ namespace SharperAnorm
             return RowParser.Safe(f);
         }
 
+        public static RowParser<IMaybe<T>, IDataRecord> Optional<T>(RowParser<T, IDataRecord> other)
+        {
+            return new RowParser<IMaybe<T>, IDataRecord>(row =>
+            {
+                // if (row.IsDBNull())
+                // {
+                //     return RowParserResult.Successful(Maybe.Nothing<T>());
+                // }
+
+                return other.Parse(row).Map(Maybe.Just);
+            });
+        }
+
         #region Parse by index
 
         public static RowParser<string, IDataRecord> String(int colIdx)
