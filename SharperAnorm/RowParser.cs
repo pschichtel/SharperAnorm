@@ -48,5 +48,10 @@ namespace SharperAnorm
                 }
             });
         }
+
+        public static RowParser<T, TRow> Constant<T, TRow>(T value)
+        {
+            return new RowParser<T, TRow>(_ => RowParserResult.Successful(value));
+        }
     }
 }
