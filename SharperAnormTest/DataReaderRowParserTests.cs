@@ -291,13 +291,13 @@ namespace SharperAnormTest
 
             Assert.That(DataReaderRowParser.String(1).Map(t => t).Parse(mock.Object).Successful, Is.False);
         }
-        
+
         [Test]
         public void ColumnNameNotFound()
         {
             var mock = new Mock<IDataRecord>();
             mock.Setup(dr => dr.GetOrdinal(IsAny<string>())).Throws(new IndexOutOfRangeException());
-            
+
             Assert.That(DataReaderRowParser.String("some_column").Parse(mock.Object).Successful, Is.False);
         }
     }

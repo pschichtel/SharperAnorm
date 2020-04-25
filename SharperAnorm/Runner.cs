@@ -18,11 +18,12 @@ namespace SharperAnorm
 
         public async Task<IEnumerator<T>> Run<T>(Query q, RowParser<T, IDataRecord> parser)
         {
-            DbCommand cmd = _connection.CreateCommand() as DbCommand;
+            var cmd = _connection.CreateCommand() as DbCommand;
             if (cmd == null)
             {
-                throw new NotImplementedException();
+                throw new NotSupportedException();
             }
+
             cmd.CommandText = q.Statement;
             foreach (var (key, value) in q.Parameters)
             {
@@ -32,7 +33,7 @@ namespace SharperAnorm
             }
 
             var result = await cmd.ExecuteReaderAsync();
-            
+
             return new DataReaderParsingEnumerator<T>(result, parser);
         }
     }
@@ -55,7 +56,7 @@ namespace SharperAnorm
 
         public void Reset()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         object IEnumerator.Current
@@ -70,10 +71,7 @@ namespace SharperAnorm
 
         public T Current
         {
-            get
-            {
-                return _parser.Parse(_reader).Value;
-            }
+            get { return _parser.Parse(_reader).Value; }
         }
     }
 }

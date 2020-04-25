@@ -31,7 +31,7 @@ namespace SharperAnorm
             return new RowParser<(T, TRes), TRow>(row => Parse(row).FlatMap(t => otherParser.Parse(row).Map(tr => (t, tr))));
         }
     }
-    
+
     public static class RowParser
     {
         public static RowParser<T, TRow> Safe<T, TRow>(Func<TRow, T> f)
