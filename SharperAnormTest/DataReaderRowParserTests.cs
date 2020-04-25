@@ -3,6 +3,8 @@ using System.Data;
 using Moq;
 using NUnit.Framework;
 using SharperAnorm;
+using static Moq.It;
+using Is = NUnit.Framework.Is;
 
 namespace SharperAnormTest
 {
@@ -284,9 +286,8 @@ namespace SharperAnormTest
         [Test]
         public void IndexNotFound()
         {
-            const string expected = "Test";
             var mock = new Mock<IDataRecord>();
-            mock.Setup(dr => dr.GetString(0)).Returns(expected);
+            mock.Setup(dr => dr.GetString(IsAny<int>())).Throws(new IndexOutOfRangeException());
 
             Assert.That(DataReaderRowParser.String(1).Map(t => t).Parse(mock.Object).Successful, Is.False);
         }
@@ -294,13 +295,10 @@ namespace SharperAnormTest
         [Test]
         public void ColumnNameNotFound()
         {
-            const string name = "string";
-            const string expected = "Test";
             var mock = new Mock<IDataRecord>();
-            mock.Setup(dr => dr.GetOrdinal(name)).Returns(0);
-            mock.Setup(dr => dr.GetString(0)).Returns(expected);
-
-            Assert.That(DataReaderRowParser.String("String").Map(t => t).Parse(mock.Object).Successful, Is.False);
+            mock.Setup(dr => dr.GetOrdinal(IsAny<string>())).Throws(new IndexOutOfRangeException());
+            
+            Assert.That(DataReaderRowParser.String("some_column").Parse(mock.Object).Successful, Is.False);
         }
     }
 }
