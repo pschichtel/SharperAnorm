@@ -76,112 +76,69 @@ namespace SharperAnorm
 
         #region Parse by column name
 
+        public static RowParser<T, IDataRecord> Named<T>(string name, Func<int, RowParser<T, IDataRecord>> byIndexParser)
+        {
+            return Safe(row => row.GetOrdinal(name)).FlatMap(byIndexParser);
+        }
+
         public static RowParser<string, IDataRecord> String(string colName)
         {
-            return Safe(row =>
-            {
-                var colIdx = row.GetOrdinal(colName);
-                return row.GetString(colIdx);
-            });
+            return Named(colName, String);
         }
 
         public static RowParser<int, IDataRecord> Integer(string colName)
         {
-            return Safe(row =>
-            {
-                var colIdx = row.GetOrdinal(colName);
-                return row.GetInt32(colIdx);
-            });
+            return Named(colName, Integer);
         }
 
         public static RowParser<long, IDataRecord> Long(string colName)
         {
-            return Safe(row =>
-            {
-                var colIdx = row.GetOrdinal(colName);
-                return row.GetInt64(colIdx);
-            });
+            return Named(colName, Long);
         }
 
         public static RowParser<decimal, IDataRecord> Decimal(string colName)
         {
-            return Safe(row =>
-            {
-                var colIdx = row.GetOrdinal(colName);
-                return row.GetDecimal(colIdx);
-            });
+            return Named(colName, Decimal);
         }
 
         public static RowParser<bool, IDataRecord> Boolean(string colName)
         {
-            return Safe(row =>
-            {
-                var colIdx = row.GetOrdinal(colName);
-                return row.GetBoolean(colIdx);
-            });
+            return Named(colName, Boolean);
         }
 
         public static RowParser<byte, IDataRecord> Byte(string colName)
         {
-            return Safe(row =>
-            {
-                var colIdx = row.GetOrdinal(colName);
-                return row.GetByte(colIdx);
-            });
+            return Named(colName, Byte);
         }
 
         public static RowParser<char, IDataRecord> Char(string colName)
         {
-            return Safe(row =>
-            {
-                var colIdx = row.GetOrdinal(colName);
-                return row.GetChar(colIdx);
-            });
+            return Named(colName, Char);
         }
 
         public static RowParser<short, IDataRecord> Short(string colName)
         {
-            return Safe(row =>
-            {
-                var colIdx = row.GetOrdinal(colName);
-                return row.GetInt16(colIdx);
-            });
+            return Named(colName, Short);
         }
 
         public static RowParser<double, IDataRecord> Double(string colName)
         {
-            return Safe(row =>
-            {
-                var colIdx = row.GetOrdinal(colName);
-                return row.GetDouble(colIdx);
-            });
+            return Named(colName, Double);
         }
 
         public static RowParser<float, IDataRecord> Float(string colName)
         {
-            return Safe(row =>
-            {
-                var colIdx = row.GetOrdinal(colName);
-                return row.GetFloat(colIdx);
-            });
+            return Named(colName, Float);
         }
 
         public static RowParser<DateTime, IDataRecord> DateTime(string colName)
         {
-            return Safe(row =>
-            {
-                var colIdx = row.GetOrdinal(colName);
-                return row.GetDateTime(colIdx);
-            });
+            return Named(colName, DateTime);
         }
 
         public static RowParser<object, IDataRecord> Value(string colName)
         {
-            return Safe(row =>
-            {
-                var colIdx = row.GetOrdinal(colName);
-                return row.GetValue(colIdx);
-            });
+            return Named(colName, Value);
         }
 
         #endregion

@@ -21,6 +21,11 @@ namespace SharperAnorm
             return new RowParser<TRes, TRow>(row => Parse(row).Map(f));
         }
 
+        public RowParser<TRes, TRow> FlatMap<TRes>(Func<T, RowParser<TRes, TRow>> f)
+        {
+            return new RowParser<TRes, TRow>(row => Parse(row).FlatMap(result => f(result).Parse(row)));
+        }
+
         public RowParser<(T, TRes), TRow> And<TRes>(RowParser<TRes, TRow> otherParser)
         {
             return new RowParser<(T, TRes), TRow>(row => Parse(row).FlatMap(t => otherParser.Parse(row).Map(tr => (t, tr))));
