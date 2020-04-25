@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SharperAnorm
 {
@@ -20,14 +21,29 @@ namespace SharperAnorm
             return new Query(Statement, newParameters);
         }
 
-        public static Query Sql(string statement)
+        public override string ToString()
+        {
+            return "[" + Statement + "] with " + string.Join(", ", Parameters.Select(e => e.Key + " = " + e.Value));
+        }
+
+        public static Query Plain(string statement)
         {
             return new Query(statement, new Dictionary<string, object>());
         }
 
-        public static Query Sql(FormattableString statement)
+        public static Query Parameterized(FormattableString statement)
         {
-            throw new Exception("TODO");
+            var args = statement.GetArguments();
+            var bindVars = new Dictionary<string, object>();
+            object?[] placeholders = new object?[statement.ArgumentCount];
+            for (int i = 0; i < args.Length; ++i)
+            {
+                var varName = "var_" + i;
+                bindVars[varName] = args[i];
+                placeholders[i] = "@" + varName;
+            }
+
+            return new Query(string.Format(statement.Format, placeholders), bindVars);
         }
     }
 }
