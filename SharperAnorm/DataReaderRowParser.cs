@@ -5,19 +5,19 @@ namespace SharperAnorm
 {
     public static class DataReaderRowParser
     {
-        private static RowParser<T, IDataRecord> Safe<T>(Func<IDataRecord, T> f)
+        private static CellParser<T, IDataRecord> Simple<T>(int column, Func<IDataRecord, T> f)
         {
-            return RowParser.Safe(f);
+            return CellParser.Simple(column, f);
         }
 
-        public static RowParser<IMaybe<T>, IDataRecord> Optional<T>(RowParser<T, IDataRecord> other)
+        public static RowParser<IMaybe<T>, IDataRecord> Optional<T>(CellParser<T, IDataRecord> other)
         {
             return new RowParser<IMaybe<T>, IDataRecord>(row =>
             {
-                // if (row.IsDBNull())
-                // {
-                //     return RowParserResult.Successful(Maybe.Nothing<T>());
-                // }
+                if (row.IsDBNull(other.Column))
+                {
+                    return RowParserResult.Successful(Maybe.Nothing<T>());
+                }
 
                 return other.Parse(row).Map(Maybe.Just);
             });
@@ -25,131 +25,131 @@ namespace SharperAnorm
 
         #region Parse by index
 
-        public static RowParser<string, IDataRecord> String(int colIdx)
+        public static CellParser<string, IDataRecord> String(int colIdx)
         {
-            return Safe(row => row.GetString(colIdx));
+            return Simple(colIdx, row => row.GetString(colIdx));
         }
 
-        public static RowParser<int, IDataRecord> Integer(int colIdx)
+        public static CellParser<int, IDataRecord> Integer(int colIdx)
         {
-            return Safe(row => row.GetInt32(colIdx));
+            return Simple(colIdx, row => row.GetInt32(colIdx));
         }
 
-        public static RowParser<long, IDataRecord> Long(int colIdx)
+        public static CellParser<long, IDataRecord> Long(int colIdx)
         {
-            return Safe(row => row.GetInt64(colIdx));
+            return Simple(colIdx, row => row.GetInt64(colIdx));
         }
 
-        public static RowParser<decimal, IDataRecord> Decimal(int colIdx)
+        public static CellParser<decimal, IDataRecord> Decimal(int colIdx)
         {
-            return Safe(row => row.GetDecimal(colIdx));
+            return Simple(colIdx, row => row.GetDecimal(colIdx));
         }
 
-        public static RowParser<bool, IDataRecord> Boolean(int colIdx)
+        public static CellParser<bool, IDataRecord> Boolean(int colIdx)
         {
-            return Safe(row => row.GetBoolean(colIdx));
+            return Simple(colIdx, row => row.GetBoolean(colIdx));
         }
 
-        public static RowParser<byte, IDataRecord> Byte(int colIdx)
+        public static CellParser<byte, IDataRecord> Byte(int colIdx)
         {
-            return Safe(row => row.GetByte(colIdx));
+            return Simple(colIdx, row => row.GetByte(colIdx));
         }
 
-        public static RowParser<char, IDataRecord> Char(int colIdx)
+        public static CellParser<char, IDataRecord> Char(int colIdx)
         {
-            return Safe(row => row.GetChar(colIdx));
+            return Simple(colIdx, row => row.GetChar(colIdx));
         }
 
-        public static RowParser<short, IDataRecord> Short(int colIdx)
+        public static CellParser<short, IDataRecord> Short(int colIdx)
         {
-            return Safe(row => row.GetInt16(colIdx));
+            return Simple(colIdx, row => row.GetInt16(colIdx));
         }
 
-        public static RowParser<double, IDataRecord> Double(int colIdx)
+        public static CellParser<double, IDataRecord> Double(int colIdx)
         {
-            return Safe(row => row.GetDouble(colIdx));
+            return Simple(colIdx, row => row.GetDouble(colIdx));
         }
 
-        public static RowParser<float, IDataRecord> Float(int colIdx)
+        public static CellParser<float, IDataRecord> Float(int colIdx)
         {
-            return Safe(row => row.GetFloat(colIdx));
+            return Simple(colIdx, row => row.GetFloat(colIdx));
         }
 
-        public static RowParser<DateTime, IDataRecord> DateTime(int colIdx)
+        public static CellParser<DateTime, IDataRecord> DateTime(int colIdx)
         {
-            return Safe(row => row.GetDateTime(colIdx));
+            return Simple(colIdx, row => row.GetDateTime(colIdx));
         }
 
-        public static RowParser<object, IDataRecord> Value(int colIdx)
+        public static CellParser<object, IDataRecord> Value(int colIdx)
         {
-            return Safe(row => row.GetValue(colIdx));
+            return Simple(colIdx, row => row.GetValue(colIdx));
         }
 
         #endregion
 
         #region Parse by column name
 
-        public static RowParser<T, IDataRecord> Named<T>(string name, Func<int, RowParser<T, IDataRecord>> byIndexParser)
+        public static CellParser<T, IDataRecord> Named<T>(string name, Func<int, CellParser<T, IDataRecord>> byIndexParser)
         {
-            return Safe(row => row.GetOrdinal(name)).FlatMap(byIndexParser);
+            return Simple(-1, row => row.GetOrdinal(name)).FlatMap(byIndexParser);
         }
 
-        public static RowParser<string, IDataRecord> String(string colName)
+        public static CellParser<string, IDataRecord> String(string colName)
         {
             return Named(colName, String);
         }
 
-        public static RowParser<int, IDataRecord> Integer(string colName)
+        public static CellParser<int, IDataRecord> Integer(string colName)
         {
             return Named(colName, Integer);
         }
 
-        public static RowParser<long, IDataRecord> Long(string colName)
+        public static CellParser<long, IDataRecord> Long(string colName)
         {
             return Named(colName, Long);
         }
 
-        public static RowParser<decimal, IDataRecord> Decimal(string colName)
+        public static CellParser<decimal, IDataRecord> Decimal(string colName)
         {
             return Named(colName, Decimal);
         }
 
-        public static RowParser<bool, IDataRecord> Boolean(string colName)
+        public static CellParser<bool, IDataRecord> Boolean(string colName)
         {
             return Named(colName, Boolean);
         }
 
-        public static RowParser<byte, IDataRecord> Byte(string colName)
+        public static CellParser<byte, IDataRecord> Byte(string colName)
         {
             return Named(colName, Byte);
         }
 
-        public static RowParser<char, IDataRecord> Char(string colName)
+        public static CellParser<char, IDataRecord> Char(string colName)
         {
             return Named(colName, Char);
         }
 
-        public static RowParser<short, IDataRecord> Short(string colName)
+        public static CellParser<short, IDataRecord> Short(string colName)
         {
             return Named(colName, Short);
         }
 
-        public static RowParser<double, IDataRecord> Double(string colName)
+        public static CellParser<double, IDataRecord> Double(string colName)
         {
             return Named(colName, Double);
         }
 
-        public static RowParser<float, IDataRecord> Float(string colName)
+        public static CellParser<float, IDataRecord> Float(string colName)
         {
             return Named(colName, Float);
         }
 
-        public static RowParser<DateTime, IDataRecord> DateTime(string colName)
+        public static CellParser<DateTime, IDataRecord> DateTime(string colName)
         {
             return Named(colName, DateTime);
         }
 
-        public static RowParser<object, IDataRecord> Value(string colName)
+        public static CellParser<object, IDataRecord> Value(string colName)
         {
             return Named(colName, Value);
         }

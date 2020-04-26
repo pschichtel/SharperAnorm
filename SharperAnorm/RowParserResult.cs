@@ -22,10 +22,7 @@ namespace SharperAnorm
     {
         public override T Value { get; }
 
-        public override bool Successful
-        {
-            get { return true; }
-        }
+        public override bool Successful => true;
 
         public RowParserSuccess(T value)
         {
@@ -52,10 +49,7 @@ namespace SharperAnorm
     {
         private readonly Exception _error;
 
-        public override T Value
-        {
-            get { throw _error; }
-        }
+        public override T Value => throw _error;
 
         public override bool Successful
         {
