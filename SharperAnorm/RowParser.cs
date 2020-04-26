@@ -17,10 +17,6 @@ namespace SharperAnorm
             {
                 return _parser(row);
             }
-            catch (UnexpectedNullFieldException)
-            {
-                throw;
-            }
             catch (Exception ex)
             {
                 return RowParserResult.Failed<T>(ex);
@@ -54,13 +50,5 @@ namespace SharperAnorm
         {
             return new RowParser<T, TRow>(_ => RowParserResult.Successful(value));
         }
-    }
-    
-    public class UnexpectedNullFieldException : Exception
-    {
-        public static readonly UnexpectedNullFieldException UnexpectedNull = new UnexpectedNullFieldException();
-
-        private UnexpectedNullFieldException()
-        {}
     }
 }

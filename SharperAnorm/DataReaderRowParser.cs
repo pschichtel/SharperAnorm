@@ -6,16 +6,23 @@ namespace SharperAnorm
     
     public static class DataReaderRowParser
     {
+        internal class UnexpectedNullFieldException : Exception
+        {
+            public static readonly UnexpectedNullFieldException UnexpectedNull = new UnexpectedNullFieldException();
+
+            private UnexpectedNullFieldException()
+            {}
+        }
         
         private static RowParser<T, IDataRecord> Simple<T>(int col, Func<IDataRecord, T> f)
         {
-            return RowParser.Simple<T, IDataRecord>(row =>
+            return new RowParser<T, IDataRecord>(row =>
             {
                 if (row.IsDBNull(col))
                 {
-                    throw UnexpectedNullFieldException.UnexpectedNull;
+                    return RowParserResult.Failed<T>(UnexpectedNullFieldException.UnexpectedNull);
                 }
-                return f(row);
+                return RowParserResult.Successful(f(row));
             });
         }
 
@@ -23,14 +30,14 @@ namespace SharperAnorm
         {
             return new RowParser<IMaybe<T>, IDataRecord>(row =>
             {
-                try
+                return other.Parse(row).Map(Maybe.Just).Recover(ex =>
                 {
-                    return other.Parse(row).Map(Maybe.Just);
-                }
-                catch (UnexpectedNullFieldException)
-                {
-                    return RowParserResult.Successful(Maybe.Nothing<T>());
-                }
+                    if (ex == UnexpectedNullFieldException.UnexpectedNull)
+                    {
+                        return RowParserResult.Successful(Maybe.Nothing<T>());
+                    }
+                    return RowParserResult.Failed<IMaybe<T>>(ex);
+                });
             });
         }
 
