@@ -13,7 +13,18 @@ namespace SharperAnorm
 
         public RowParserResult<T> Parse(TRow row)
         {
-            return _parser(row);
+            try
+            {
+                return _parser(row);
+            }
+            catch (UnexpectedNullFieldException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                return RowParserResult.Failed<T>(ex);
+            }
         }
 
         public RowParser<TRes, TRow> Map<TRes>(Func<T, TRes> f)
@@ -34,24 +45,22 @@ namespace SharperAnorm
 
     public static class RowParser
     {
-        public static RowParser<T, TRow> Safe<T, TRow>(Func<TRow, T> f)
+        public static RowParser<T, TRow> Simple<T, TRow>(Func<TRow, T> f)
         {
-            return new RowParser<T, TRow>(row =>
-            {
-                try
-                {
-                    return RowParserResult.Successful(f(row));
-                }
-                catch (Exception ex)
-                {
-                    return RowParserResult.Failed<T>(ex);
-                }
-            });
+            return new RowParser<T, TRow>(row => RowParserResult.Successful(f(row)));
         }
 
         public static RowParser<T, TRow> Constant<T, TRow>(T value)
         {
             return new RowParser<T, TRow>(_ => RowParserResult.Successful(value));
         }
+    }
+    
+    public class UnexpectedNullFieldException : Exception
+    {
+        public static readonly UnexpectedNullFieldException UnexpectedNull = new UnexpectedNullFieldException();
+
+        private UnexpectedNullFieldException()
+        {}
     }
 }
