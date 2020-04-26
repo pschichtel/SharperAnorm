@@ -26,7 +26,7 @@ namespace SharperAnormTest
         [Test]
         public async Task Run()
         {
-            var runner = new DataReaderRunner(async () => _connection, async (c) => { });
+            var runner = new DataReaderRunner(async () => _connection, async c => { });
 
             await runner.RunNoResult(Query.Plain("CREATE TABLE test_table (a integer, b integer, c integer)"));
             await runner.RunNoResult(Query.Plain("INSERT INTO test_table (a, b, c) VALUES (1, 2, 3)"));
@@ -48,6 +48,16 @@ namespace SharperAnormTest
             var runner = new DataReaderRunner(async () => _connection, async (c) => { });
 
             var result = await runner.RunSingle(Query.Plain("SELECT null"), Optional(Boolean(0)));
+            
+            Assert.That(result, Is.EqualTo(Maybe.Nothing<bool>()));
+        }
+        
+        [Test]
+        public async Task NamedParser()
+        {
+            var runner = new DataReaderRunner(async () => _connection, async c => { });
+
+            var result = await runner.RunSingle(Query.Plain("SELECT null as a"), Optional(Boolean("a")));
             
             Assert.That(result, Is.EqualTo(Maybe.Nothing<bool>()));
         }
