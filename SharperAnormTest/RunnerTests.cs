@@ -1,6 +1,7 @@
 using System;
 using System.Data.Common;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using NUnit.Framework;
@@ -40,6 +41,30 @@ namespace SharperAnormTest
             });
             
             Assert.That(a, Is.EqualTo(6));
+        }
+        
+        [Test]
+        public async Task IterateResults()
+        {
+            var runner = new DataReaderRunner(async () => _connection, async c => { });
+
+            await runner.RunNoResult(Query.Plain("CREATE TABLE test_table (a integer, b integer, c integer)"));
+            await runner.RunNoResult(Query.Plain("INSERT INTO test_table (a, b, c) VALUES (1, 2, 3), (2, 3, 4), (5, 6, 7)"));
+
+            var parser = Integer(0).And(Integer(1)).And(Integer(2));
+            
+            var results = await runner.Run(Query.Parameterized($"SELECT a, b, c FROM test_table"), parser);
+
+            var csSum = results.Select(row =>
+            {
+                var ((a, b), c) = row;
+                return a * b * c;
+            }).Sum();
+
+            var sqlSum = await runner.RunSingle(Query.Parameterized($"SELECT SUM(a * b * c) AS sum FROM test_table"), Integer("sum"));
+            
+            Assert.That(sqlSum, Is.EqualTo(240));
+            Assert.That(csSum, Is.EqualTo(sqlSum));
         }
         
         [Test]

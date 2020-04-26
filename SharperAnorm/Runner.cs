@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -11,7 +10,7 @@ namespace SharperAnorm
 {
     public interface IRunner<TRow>
     {
-        Task<IEnumerator<T>> Run<T>(Query q, RowParser<T, TRow> p);
+        Task<IEnumerable<T>> Run<T>(Query q, RowParser<T, TRow> p);
         Task RunNoResult(Query q);
         Task<T> RunSingle<T>(Query q, RowParser<T, TRow> p);
     }
@@ -101,17 +100,17 @@ namespace SharperAnorm
 
         protected abstract Task<T> Single<T>(DbDataReader result, RowParser<T, TRow> parser, CancellationToken ct);
 
-        public async Task<IEnumerator<T>> Run<T>(Query q, RowParser<T, TRow> p, CancellationToken ct)
+        public async Task<IEnumerable<T>> Run<T>(Query q, RowParser<T, TRow> p, CancellationToken ct)
         {
             return await WithConnection(c => Run(c, q, p, ct));
         }
         
-        public Task<IEnumerator<T>> Run<T>(Query q, RowParser<T, TRow> p)
+        public Task<IEnumerable<T>> Run<T>(Query q, RowParser<T, TRow> p)
         {
             return Run(q, p, default);
         }
 
-        internal Task<IEnumerator<T>> Run<T>(DbConnection c, Query q, RowParser<T, TRow> p, CancellationToken ct)
+        internal Task<IEnumerable<T>> Run<T>(DbConnection c, Query q, RowParser<T, TRow> p, CancellationToken ct)
         {
             return RunAction(c, q, async cmd =>
             {
@@ -135,7 +134,7 @@ namespace SharperAnorm
             return await action(cmd);
         }
 
-        protected abstract IEnumerator<T> Enumerate<T>(DbDataReader result, RowParser<T, TRow> parser);
+        protected abstract IEnumerable<T> Enumerate<T>(DbDataReader result, RowParser<T, TRow> parser);
 
         [HandleProcessCorruptedStateExceptions]
         public Task<T> Transaction<T>(Func<TransactionRunner<TRow>, Task<T>> f)
@@ -188,7 +187,7 @@ namespace SharperAnorm
             _ct = ct;
         }
 
-        public Task<IEnumerator<T>> Run<T>(Query q, RowParser<T, TRow> p)
+        public Task<IEnumerable<T>> Run<T>(Query q, RowParser<T, TRow> p)
         {
             return _runner.Run(_connection, q, p, _ct);
         }
@@ -210,9 +209,13 @@ namespace SharperAnorm
         {
         }
 
-        protected override IEnumerator<T> Enumerate<T>(DbDataReader result, RowParser<T, IDataRecord> parser)
+        protected override IEnumerable<T> Enumerate<T>(DbDataReader result, RowParser<T, IDataRecord> parser)
         {
-            return new DataReaderParsingEnumerator<T>(result, parser);
+            while (result.Read())
+            {
+                yield return parser.Parse(result).Value;
+            }
+            result.Dispose();
         }
 
         protected override async Task<T> Single<T>(DbDataReader result, RowParser<T, IDataRecord> parser, CancellationToken ct)
@@ -233,36 +236,5 @@ namespace SharperAnorm
 
             return parseResult;
         }
-    }
-
-    internal class DataReaderParsingEnumerator<T> : IEnumerator<T>
-    {
-        private readonly IDataReader _reader;
-        private readonly RowParser<T, IDataRecord> _parser;
-
-        public DataReaderParsingEnumerator(IDataReader reader, RowParser<T, IDataRecord> parser)
-        {
-            _reader = reader;
-            _parser = parser;
-        }
-
-        public bool MoveNext()
-        {
-            return _reader.Read();
-        }
-
-        public void Reset()
-        {
-            throw new NotSupportedException();
-        }
-
-        object IEnumerator.Current => Current;
-
-        public void Dispose()
-        {
-            _reader.Dispose();
-        }
-
-        public T Current => _parser.Parse(_reader).Value;
     }
 }
