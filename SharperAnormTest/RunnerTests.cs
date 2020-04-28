@@ -13,7 +13,7 @@ namespace SharperAnormTest
     public class RunnerTests
     {
         private DbConnection _connection;
-        
+
         [SetUp]
         public void Setup()
         {
@@ -22,7 +22,7 @@ namespace SharperAnormTest
             _connection = new SqliteConnection($"Data Source={databasePath}");
             _connection.Open();
         }
-        
+
         [Test]
         public async Task Run()
         {
@@ -31,34 +31,34 @@ namespace SharperAnormTest
             await runner.RunNoResult(Query.Plain("CREATE TABLE test_table (a integer, b integer, c integer)"));
             await runner.RunNoResult(Query.Plain("INSERT INTO test_table (a, b, c) VALUES (1, 2, 3)"));
 
-            var a = await runner.Transaction(async r =>
+            var result = await runner.Transaction(async r =>
             {
                 var parser = Integer(0).And(Integer(1)).And(Integer(2));
                 var ((a, b), c) = await r.RunSingle(Query.Parameterized($"SELECT a, b, c FROM test_table"), parser);
-                
-                return a *  b * c;
+
+                return a * b * c;
             });
-            
-            Assert.That(a, Is.EqualTo(6));
+
+            Assert.That(result, Is.EqualTo(6));
         }
-        
+
         [Test]
         public async Task NullBehavior()
         {
             var runner = new DataReaderRunner(async () => _connection, async (c) => { });
 
             var result = await runner.RunSingle(Query.Plain("SELECT null"), Optional(Boolean(0)));
-            
+
             Assert.That(result, Is.EqualTo(Maybe.Nothing<bool>()));
         }
-        
+
         [Test]
         public async Task NamedParser()
         {
             var runner = new DataReaderRunner(async () => _connection, async c => { });
 
             var result = await runner.RunSingle(Query.Plain("SELECT null as a"), Optional(Boolean("a")));
-            
+
             Assert.That(result, Is.EqualTo(Maybe.Nothing<bool>()));
         }
     }
