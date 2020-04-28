@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace SharperAnorm
 {
+    
     public abstract class Runner<TRow> : IRunner<TRow>
     {
         private readonly Func<Task<DbConnection>> _connectionProvider;
@@ -19,31 +20,19 @@ namespace SharperAnorm
             _connectionDisposer = connectionDisposer;
         }
 
-        private async Task<T> WithConnection<T>(Func<DbConnection, Task<T>> f)
+        private async Task<T> WithConnection<T>(Func<Rc<DbConnection>, Task<T>> f)
         {
             var c = await _connectionProvider();
-            try
-            {
-                return await f(c);
-            }
-            finally
-            {
-                await _connectionDisposer(c);
-            }
+            return await f(new Rc<DbConnection>(c, _connectionDisposer));
         }
 
-        private async Task WithConnection(Func<DbConnection, Task> f)
+        private async Task WithConnection(Func<Rc<DbConnection>, Task> f)
         {
             var c = await _connectionProvider();
-            try
-            {
-                await f(c);
-            }
-            finally
-            {
-                await _connectionDisposer(c);
-            }
+            await f(new Rc<DbConnection>(c, _connectionDisposer));
         }
+
+        #region No Result
 
         public Task RunNoResult(Query q)
         {
@@ -58,10 +47,24 @@ namespace SharperAnorm
             });
         }
 
-        public Task RunNoResult(DbConnection c, Query q, CancellationToken ct)
+        internal Task RunNoResult(Rc<DbConnection> c, Query q, CancellationToken ct)
         {
-            return RunAction(c, q, async cmd => await cmd.ExecuteNonQueryAsync(ct));
+            return RunAction(c, q, async cmd =>
+            {
+                try
+                {
+                    return await cmd.ExecuteNonQueryAsync(ct);
+                }
+                finally
+                {
+                    c.Dispose();
+                }
+            });
         }
+
+        #endregion
+
+        #region Single Result
 
         public Task<T> RunSingle<T>(Query q, RowParser<T, TRow> p)
         {
@@ -72,7 +75,8 @@ namespace SharperAnorm
         {
             return WithConnection(c =>
             {
-                return RunAction(c, q, async cmd =>
+                var cRef = c.Clone();
+                return RunAction(cRef, q, async cmd =>
                 {
                     var result = await cmd.ExecuteReaderAsync(ct);
 
@@ -81,41 +85,57 @@ namespace SharperAnorm
             });
         }
 
-        internal async Task<T> RunSingle<T>(DbConnection c, Query q, RowParser<T, TRow> p, CancellationToken ct)
+        internal async Task<T> RunSingle<T>(Rc<DbConnection> c, Query q, RowParser<T, TRow> p, CancellationToken ct)
         {
-            return await RunAction(c, q, async cmd =>
+            return await RunAction(c.Clone(), q, async cmd =>
             {
                 var result = await cmd.ExecuteReaderAsync(ct);
 
-                return await Single(result, p, ct);
+                try
+                {
+                    var parsedResult = await Single(result, p, ct);
+                    return parsedResult;
+                }
+                finally
+                {
+                    c.Dispose();
+                }
             });
         }
 
         protected abstract Task<T> Single<T>(DbDataReader result, RowParser<T, TRow> parser, CancellationToken ct);
 
+        #endregion
+
+        #region Many Results
+
         public async Task<IEnumerable<T>> Run<T>(Query q, RowParser<T, TRow> p, CancellationToken ct)
         {
             return await WithConnection(c => Run(c, q, p, ct));
         }
-        
+
         public Task<IEnumerable<T>> Run<T>(Query q, RowParser<T, TRow> p)
         {
             return Run(q, p, default);
         }
 
-        internal Task<IEnumerable<T>> Run<T>(DbConnection c, Query q, RowParser<T, TRow> p, CancellationToken ct)
+        internal Task<IEnumerable<T>> Run<T>(Rc<DbConnection> c, Query q, RowParser<T, TRow> p, CancellationToken ct)
         {
             return RunAction(c, q, async cmd =>
             {
                 var result = await cmd.ExecuteReaderAsync(ct);
 
-                return Enumerate(result, p);
+                return Enumerate(c, cmd, result, p);
             });
         }
-        
-        private async Task<T> RunAction<T>(DbConnection c, Query q, Func<DbCommand, Task<T>> action)
+
+        protected abstract IEnumerable<T> Enumerate<T>(Rc<DbConnection> connection, DbCommand cmd, DbDataReader result, RowParser<T, TRow> parser);
+
+        #endregion
+
+        private static async Task<T> RunAction<T>(Rc<DbConnection> c, Query q, Func<DbCommand, Task<T>> action)
         {
-            await using var cmd = c.CreateCommand();
+            var cmd = c.Value.CreateCommand();
             cmd.CommandText = q.Statement;
             foreach (var (key, value) in q.Parameters)
             {
@@ -127,9 +147,8 @@ namespace SharperAnorm
             return await action(cmd);
         }
 
-        protected abstract IEnumerable<T> Enumerate<T>(DbDataReader result, RowParser<T, TRow> parser);
+        #region Transaction
 
-        [HandleProcessCorruptedStateExceptions]
         public Task<T> Transaction<T>(Func<TransactionRunner<TRow>, Task<T>> f)
         {
             async Task<DbTransaction> StartTransaction(DbConnection c) => await c.BeginTransactionAsync();
@@ -137,7 +156,6 @@ namespace SharperAnorm
             return Transaction(StartTransaction, f);
         }
 
-        [HandleProcessCorruptedStateExceptions]
         public Task<T> Transaction<T>(IsolationLevel isolationLevel, Func<TransactionRunner<TRow>, Task<T>> f)
         {
             async Task<DbTransaction> StartTransaction(DbConnection c) => await c.BeginTransactionAsync(isolationLevel);
@@ -150,7 +168,7 @@ namespace SharperAnorm
         {
             return WithConnection(async c =>
             {
-                await using var transaction = await startTransaction(c);
+                await using var transaction = await startTransaction(c.Value);
                 var runner = new TransactionRunner<TRow>(this, c, ct);
                 try
                 {
@@ -165,15 +183,17 @@ namespace SharperAnorm
                 }
             });
         }
+
+        #endregion
     }
 
     public class TransactionRunner<TRow> : IRunner<TRow>
     {
         private readonly Runner<TRow> _runner;
-        private readonly DbConnection _connection;
+        private readonly Rc<DbConnection> _connection;
         private readonly CancellationToken _ct;
 
-        internal TransactionRunner(Runner<TRow> runner, DbConnection connection, CancellationToken ct)
+        internal TransactionRunner(Runner<TRow> runner, Rc<DbConnection> connection, CancellationToken ct)
         {
             _runner = runner;
             _connection = connection;
@@ -182,17 +202,17 @@ namespace SharperAnorm
 
         public Task<IEnumerable<T>> Run<T>(Query q, RowParser<T, TRow> p)
         {
-            return _runner.Run(_connection, q, p, _ct);
+            return _runner.Run(_connection.Clone(), q, p, _ct);
         }
 
         public Task RunNoResult(Query q)
         {
-            return _runner.RunNoResult(_connection, q, _ct);
+            return _runner.RunNoResult(_connection.Clone(), q, _ct);
         }
 
         public Task<T> RunSingle<T>(Query q, RowParser<T, TRow> p)
         {
-            return _runner.RunSingle(_connection, q, p, _ct);
+            return _runner.RunSingle(_connection.Clone(), q, p, _ct);
         }
     }
     
@@ -202,13 +222,22 @@ namespace SharperAnorm
         {
         }
 
-        protected override IEnumerable<T> Enumerate<T>(DbDataReader result, RowParser<T, IDataRecord> parser)
+        protected override IEnumerable<T> Enumerate<T>(Rc<DbConnection> connection, DbCommand cmd, DbDataReader result, RowParser<T, IDataRecord> parser)
         {
-            while (result.Read())
+            try
             {
-                yield return parser.Parse(result).Value;
+                while (result.Read())
+                {
+                    yield return parser.Parse(result).Value;
+                }
             }
-            result.Dispose();
+            finally
+            {
+                result.Dispose();
+                cmd.Dispose();
+                connection.Dispose();
+            }
+
         }
 
         protected override async Task<T> Single<T>(DbDataReader result, RowParser<T, IDataRecord> parser, CancellationToken ct)
