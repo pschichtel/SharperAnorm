@@ -111,14 +111,13 @@ namespace SharperAnormTest
             await runner.RunNoResult(Query.Plain("INSERT INTO test_table (a, b, c) VALUES (1, 2, 3), (2, 3, 4), (5, 6, 7)"));
 
             var parser = Integer(0).And(Integer(1)).And(Integer(2));
-            
-            var results = await runner.Run(Query.Plain("SELECT a, b, c FROM test_table"), parser);
 
-            var ((a, b), c) = results.First();
-            Assert.That(a * b * c, Is.EqualTo(6));
-            
-            //results.Dispose();
-            
+            using (var results = await runner.Run(Query.Plain("SELECT a, b, c FROM test_table"), parser))
+            {
+                var ((a, b), c) = results.First();
+                Assert.That(a * b * c, Is.EqualTo(6));
+            }
+
             Assert.That(_connectionCounter, Is.EqualTo(0));
         }
     }

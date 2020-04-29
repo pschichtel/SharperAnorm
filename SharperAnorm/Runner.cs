@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 namespace SharperAnorm
 {
     
+    // TODO reconsider if ref counting is *really* necessary. Only real advantage it is providing right now: DataReaders can leak from a transaction, but not even sure if that is valid.
     public abstract class Runner<TRow> : IRunner<TRow>
     {
         private readonly Func<Task<DbConnection>> _connectionProvider;
@@ -109,17 +111,17 @@ namespace SharperAnorm
 
         #region Many Results
 
-        public async Task<IEnumerable<T>> Run<T>(Query q, RowParser<T, TRow> p, CancellationToken ct)
+        public async Task<IQueryResults<T>> Run<T>(Query q, RowParser<T, TRow> p, CancellationToken ct)
         {
             return await WithConnection(c => Run(c, q, p, ct));
         }
 
-        public Task<IEnumerable<T>> Run<T>(Query q, RowParser<T, TRow> p)
+        public Task<IQueryResults<T>> Run<T>(Query q, RowParser<T, TRow> p)
         {
             return Run(q, p, default);
         }
 
-        internal Task<IEnumerable<T>> Run<T>(Rc<DbConnection> c, Query q, RowParser<T, TRow> p, CancellationToken ct)
+        internal Task<IQueryResults<T>> Run<T>(Rc<DbConnection> c, Query q, RowParser<T, TRow> p, CancellationToken ct)
         {
             return RunAction(c, q, async cmd =>
             {
@@ -129,7 +131,7 @@ namespace SharperAnorm
             });
         }
 
-        protected abstract IEnumerable<T> Enumerate<T>(Rc<DbConnection> connection, DbCommand cmd, DbDataReader result, RowParser<T, TRow> parser);
+        protected abstract IQueryResults<T> Enumerate<T>(Rc<DbConnection> connection, DbCommand cmd, DbDataReader result, RowParser<T, TRow> parser);
 
         #endregion
 
@@ -200,7 +202,7 @@ namespace SharperAnorm
             _ct = ct;
         }
 
-        public Task<IEnumerable<T>> Run<T>(Query q, RowParser<T, TRow> p)
+        public Task<IQueryResults<T>> Run<T>(Query q, RowParser<T, TRow> p)
         {
             return _runner.Run(_connection.Clone(), q, p, _ct);
         }
@@ -222,21 +224,9 @@ namespace SharperAnorm
         {
         }
 
-        protected override IEnumerable<T> Enumerate<T>(Rc<DbConnection> connection, DbCommand cmd, DbDataReader result, RowParser<T, IDataRecord> parser)
+        protected override IQueryResults<T> Enumerate<T>(Rc<DbConnection> connection, DbCommand cmd, DbDataReader result, RowParser<T, IDataRecord> parser)
         {
-            try
-            {
-                while (result.Read())
-                {
-                    yield return parser.Parse(result).Value;
-                }
-            }
-            finally
-            {
-                result.Dispose();
-                cmd.Dispose();
-                connection.Dispose();
-            }
+            return new DataReaderQueryResults<T>(connection, cmd, result, parser);
 
         }
 
@@ -258,5 +248,82 @@ namespace SharperAnorm
 
             return parseResult;
         }
+    }
+
+    public interface IQueryResults<out T> : IEnumerable<T>, IDisposable
+    {
+        
+    }
+    
+    public class DataReaderQueryResults<T> : IQueryResults<T>
+    {
+        private readonly Rc<DbConnection> _connection;
+        private readonly DbCommand _command;
+        private readonly IDataReader _reader;
+        
+        private readonly DataReaderParsingEnumerator<T> _enumerator;
+
+        public DataReaderQueryResults(Rc<DbConnection> connection, DbCommand command, IDataReader reader, RowParser<T, IDataRecord> parser)
+        {
+            _connection = connection;
+            _command = command;
+            _reader = reader;
+            _enumerator = new DataReaderParsingEnumerator<T>(reader, parser, Dispose);
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            return _enumerator;
+        }
+
+        public void Dispose()
+        {
+            _reader.Dispose();
+            _command.Dispose();
+            _connection.Dispose();
+        }
+    }
+    
+    public class DataReaderParsingEnumerator<T> : IEnumerator<T>
+    {
+        private readonly IDataReader _reader;
+        private readonly RowParser<T, IDataRecord> _parser;
+        private readonly Action _tearDown;
+
+        public DataReaderParsingEnumerator(IDataReader reader, RowParser<T, IDataRecord> parser, Action tearDown)
+        {
+            _reader = reader;
+            _parser = parser;
+            _tearDown = tearDown;
+        }
+
+        public bool MoveNext()
+        {
+            if (!_reader.Read())
+            {
+                Dispose();
+                return false;
+            }
+            return true;
+        }
+
+        public void Reset()
+        {
+            throw new NotSupportedException();
+        }
+
+        object IEnumerator.Current => Current;
+
+        public void Dispose()
+        {
+            _tearDown();
+        }
+
+        public T Current => _parser.Parse(_reader).Value;
     }
 }
