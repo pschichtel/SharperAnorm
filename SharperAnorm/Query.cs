@@ -9,7 +9,7 @@ namespace SharperAnorm
         public string Statement { get; }
         public IDictionary<string, object> Parameters { get; }
 
-        public Query(string statement, IDictionary<string, object> parameters)
+        private Query(string statement, IDictionary<string, object> parameters)
         {
             Statement = statement;
             Parameters = parameters;
@@ -35,7 +35,7 @@ namespace SharperAnorm
         {
             var args = statement.GetArguments();
             var bindVars = new Dictionary<string, object>();
-            object?[] placeholders = new object?[statement.ArgumentCount];
+            var placeholders = new object[statement.ArgumentCount];
             for (int i = 0; i < args.Length; ++i)
             {
                 var varName = "var_" + i;

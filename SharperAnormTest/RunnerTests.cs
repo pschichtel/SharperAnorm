@@ -38,7 +38,7 @@ namespace SharperAnormTest
                 _connectionCounter--;
             };
         }
-        
+
         [Test]
         public async Task Run()
         {
@@ -51,13 +51,13 @@ namespace SharperAnormTest
             {
                 var parser = Integer(0).And(Integer(1)).And(Integer(2));
                 var ((a, b), c) = await r.RunSingle(Query.Parameterized($"SELECT a, b, c FROM test_table"), parser);
-                
-                return a *  b * c;
+
+                return a * b * c;
             });
-            
+
             Assert.That(result, Is.EqualTo(6));
         }
-        
+
         [Test]
         public async Task IterateResults()
         {
@@ -67,7 +67,7 @@ namespace SharperAnormTest
             await runner.RunNoResult(Query.Plain("INSERT INTO test_table (a, b, c) VALUES (1, 2, 3), (2, 3, 4), (5, 6, 7)"));
 
             var parser = Integer(0).And(Integer(1)).And(Integer(2));
-            
+
             var results = await runner.Run(Query.Parameterized($"SELECT a, b, c FROM test_table"), parser);
 
             var csSum = results.Select(row =>
@@ -77,31 +77,31 @@ namespace SharperAnormTest
             }).Sum();
 
             var sqlSum = await runner.RunSingle(Query.Parameterized($"SELECT SUM(a * b * c) AS sum FROM test_table"), Integer("sum"));
-            
+
             Assert.That(sqlSum, Is.EqualTo(240));
             Assert.That(csSum, Is.EqualTo(sqlSum));
         }
-        
+
         [Test]
         public async Task NullBehavior()
         {
             var runner = new DataReaderRunner(_provider, _disposer);
 
             var result = await runner.RunSingle(Query.Plain("SELECT null"), Optional(Boolean(0)));
-            
+
             Assert.That(result, Is.EqualTo(Maybe.Nothing<bool>()));
         }
-        
+
         [Test]
         public async Task NamedParser()
         {
             var runner = new DataReaderRunner(_provider, _disposer);
 
             var result = await runner.RunSingle(Query.Plain("SELECT null as a"), Optional(Boolean("a")));
-            
+
             Assert.That(result, Is.EqualTo(Maybe.Nothing<bool>()));
         }
-        
+
         [Test]
         public async Task IterateResultsPartially()
         {
@@ -120,17 +120,17 @@ namespace SharperAnormTest
 
             Assert.That(_connectionCounter, Is.EqualTo(0));
         }
-        
+
         [Test]
         public async Task IterateResultsInTransaction()
         {
             var runner = new DataReaderRunner(_provider, _disposer);
-        
+
             await runner.RunNoResult(Query.Plain("CREATE TABLE test_table (a integer, b integer, c integer)"));
             await runner.RunNoResult(Query.Plain("INSERT INTO test_table (a, b, c) VALUES (1, 2, 3), (2, 3, 4), (5, 6, 7)"));
-        
+
             var parser = Integer(0).And(Integer(1)).And(Integer(2));
-        
+
             await runner.Transaction(async r =>
             {
                 using var results = await runner.Run(Query.Plain("SELECT a, b, c FROM test_table"), parser);
@@ -139,12 +139,12 @@ namespace SharperAnormTest
                     var ((a, b), c) = row;
                     return a * b * c;
                 }).Sum();
-            
+
                 Assert.That(sum, Is.EqualTo(240));
                 return sum;
             });
         }
-        
+
         // Considered non-issue, possibly reevaluate in the future
         // [Test]
         // public async Task IterateResultsLeakedFromTransaction()

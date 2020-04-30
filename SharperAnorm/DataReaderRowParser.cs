@@ -3,7 +3,6 @@ using System.Data;
 
 namespace SharperAnorm
 {
-    
     public static class DataReaderRowParser
     {
         internal class UnexpectedNullFieldException : Exception
@@ -11,9 +10,10 @@ namespace SharperAnorm
             public static readonly UnexpectedNullFieldException UnexpectedNull = new UnexpectedNullFieldException();
 
             private UnexpectedNullFieldException()
-            {}
+            {
+            }
         }
-        
+
         private static RowParser<T, IDataRecord> Simple<T>(int col, Func<IDataRecord, T> f)
         {
             return new RowParser<T, IDataRecord>(row =>
@@ -22,6 +22,7 @@ namespace SharperAnorm
                 {
                     return RowParserResult.Failed<T>(UnexpectedNullFieldException.UnexpectedNull);
                 }
+
                 return RowParserResult.Successful(f(row));
             });
         }
@@ -36,6 +37,7 @@ namespace SharperAnorm
                     {
                         return RowParserResult.Successful(Maybe.Nothing<T>());
                     }
+
                     return RowParserResult.Failed<IMaybe<T>>(ex);
                 });
             });
