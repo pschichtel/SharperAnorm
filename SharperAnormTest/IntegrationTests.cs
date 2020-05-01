@@ -201,5 +201,17 @@ namespace SharperAnormTest
             
             Assert.That(sum, Is.EqualTo(25440));
         }
+
+        [Test]
+        public async Task NoResultQueries()
+        {
+            var runner = new DataReaderRunner(_provider, _disposer);
+
+            await runner.RunNoResult(Query.Plain("CREATE TABLE test_table (id integer primary key autoincrement, name text)"));
+            var insertedId = await runner.RunSingle(Query.Plain("INSERT INTO test_table (name) VALUES ('a'); SELECT last_insert_rowid()"), Integer(0));
+            var updatedName = await runner.RunSingle(Query.Parameterized($"UPDATE test_table SET name = 'b' WHERE id = {insertedId}; SELECT name test_table WHERE id = {insertedId}"), String(0));
+            
+            Assert.That(updatedName, Is.EqualTo("b"));
+        }
     }
 }
