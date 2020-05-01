@@ -189,7 +189,7 @@ namespace SharperAnormTest
                         return a * b * c;
                     }).Sum();
                 }
-                
+
                 await using var results = await runner.RunMany(Query.Plain("SELECT a, b, c FROM test_table; SELECT a * 3, b * 5, c * 7 FROM test_table"));
                 var sumA = SumUp(results);
                 Assert.That(await results.NextResult(), Is.True);
@@ -197,9 +197,20 @@ namespace SharperAnormTest
 
                 return sumA + sumB;
             });
-            
-            
+
             Assert.That(sum, Is.EqualTo(25440));
+        }
+
+        [Test]
+        public async Task TwoQueriesInCommand()
+        {
+            var runner = new DataReaderRunner(_provider, _disposer);
+
+            await runner.RunNoResult(Query.Plain("CREATE TABLE test_table (id integer primary key autoincrement, name text)"));
+            var insertedId = await runner.RunSingle(Query.Plain("INSERT INTO test_table (name) VALUES ('a'); SELECT last_insert_rowid()"), Integer(0));
+            var updatedName = await runner.RunSingle(Query.Parameterized($"UPDATE test_table SET name = 'b' WHERE id = {insertedId}; SELECT name FROM test_table WHERE id = {insertedId}"), String(0));
+
+            Assert.That(updatedName, Is.EqualTo("b"));
         }
     }
 }

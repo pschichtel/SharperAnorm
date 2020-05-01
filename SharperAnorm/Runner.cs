@@ -150,6 +150,7 @@ namespace SharperAnorm
                 var param = cmd.CreateParameter();
                 param.ParameterName = key;
                 param.Value = value;
+                cmd.Parameters.Add(param);
             }
 
             return await action(cmd);
