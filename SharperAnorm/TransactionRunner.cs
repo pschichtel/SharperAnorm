@@ -17,19 +17,44 @@ namespace SharperAnorm
             _ct = ct;
         }
 
-        public Task<IQueryResults<T>> Run<T>(Query q, RowParser<T, TRow> p)
-        {
-            return _runner.Run(_connection, q, p, _ct, async () => { });
-        }
-
         public Task<int> RunNoResult(Query q)
         {
-            return _runner.RunNoResult(_connection, q, _ct);
+            return RunNoResult(q, _ct);
+        }
+
+        public Task<int> RunNoResult(Query q, CancellationToken ct)
+        {
+            return _runner.RunNoResultInternal(_connection, q, ct);
         }
 
         public Task<T> RunSingle<T>(Query q, RowParser<T, TRow> p)
         {
-            return _runner.RunSingle(_connection, q, p, _ct);
+            return RunSingle(q, p, _ct);
+        }
+
+        public Task<T> RunSingle<T>(Query q, RowParser<T, TRow> p, CancellationToken ct)
+        {
+            return _runner.RunSingleInternal(_connection, q, p, ct);
+        }
+
+        public Task<IQueryResult<T>> Run<T>(Query q, RowParser<T, TRow> p)
+        {
+            return Run(q, p, _ct);
+        }
+
+        public Task<IQueryResult<T>> Run<T>(Query q, RowParser<T, TRow> p, CancellationToken ct)
+        {
+            return _runner.RunInternal(_connection, q, p, ct, async () => { });
+        }
+
+        public Task<IQueryResultSet<TRow>> RunMany(Query q)
+        {
+            return RunMany(q, _ct);
+        }
+
+        public Task<IQueryResultSet<TRow>> RunMany(Query q, CancellationToken ct)
+        {
+            return _runner.RunManyInternal(_connection, q, ct, async () => { });
         }
     }
 }

@@ -13,16 +13,14 @@ namespace SharperAnorm
         private readonly DbDataReader _reader;
         private readonly RowParser<T, IDataRecord> _parser;
         private readonly CancellationToken _ct;
-        private readonly Func<Task> _onComplete;
-        private readonly Mutex _lock = new Mutex();
-        private bool _completed;
+        private readonly CallOnce<Task> _onComplete;
 
         public DataReaderParsingEnumerator(DbDataReader reader, RowParser<T, IDataRecord> parser, CancellationToken ct, Func<Task> onComplete)
         {
             _reader = reader;
             _parser = parser;
             _ct = ct;
-            _onComplete = onComplete;
+            _onComplete = new CallOnce<Task>(onComplete);
         }
 
         public bool MoveNext()
@@ -61,14 +59,7 @@ namespace SharperAnorm
 
         public async ValueTask DisposeAsync()
         {
-            _lock.WaitOne();
-            if (!_completed)
-            {
-                _completed = true;
-                await _onComplete();
-            }
-
-            _lock.ReleaseMutex();
+            await _onComplete.Call();
         }
 
         public T Current => _parser.Parse(_reader).Value;

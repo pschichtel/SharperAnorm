@@ -18,20 +18,7 @@ namespace SharperAnorm
             _connectionDisposer = connectionDisposer;
         }
 
-        private async Task<T> WithConnection<T>(Func<DbConnection, Task<T>> f)
-        {
-            var c = await _connectionProvider();
-            try
-            {
-                return await f(c);
-            }
-            finally
-            {
-                await _connectionDisposer(c);
-            }
-        }
-
-        #region No Result
+        #region No Results
 
         public Task<int> RunNoResult(Query q)
         {
@@ -40,17 +27,17 @@ namespace SharperAnorm
 
         public async Task<int> RunNoResult(Query q, CancellationToken ct)
         {
-            return await WithConnection(async c => await RunNoResult(c, q, ct));
+            return await WithConnection(async c => await RunNoResultInternal(c, q, ct));
         }
 
-        internal Task<int> RunNoResult(DbConnection c, Query q, CancellationToken ct)
+        internal Task<int> RunNoResultInternal(DbConnection c, Query q, CancellationToken ct)
         {
             return RunAction(c, q, cmd => cmd.ExecuteNonQueryAsync(ct));
         }
 
         #endregion
 
-        #region Single Result
+        #region Single Result, Single Row
 
         public Task<T> RunSingle<T>(Query q, RowParser<T, TRow> p)
         {
@@ -59,10 +46,10 @@ namespace SharperAnorm
 
         public Task<T> RunSingle<T>(Query q, RowParser<T, TRow> p, CancellationToken ct)
         {
-            return WithConnection(c => RunSingle(c, q, p, ct));
+            return WithConnection(c => RunSingleInternal(c, q, p, ct));
         }
 
-        internal async Task<T> RunSingle<T>(DbConnection c, Query q, RowParser<T, TRow> p, CancellationToken ct)
+        internal async Task<T> RunSingleInternal<T>(DbConnection c, Query q, RowParser<T, TRow> p, CancellationToken ct)
         {
             return await RunAction(c, q, async cmd =>
             {
@@ -76,20 +63,20 @@ namespace SharperAnorm
 
         #endregion
 
-        #region Many Results
+        #region Single Result, Many Rows
 
-        public Task<IQueryResults<T>> Run<T>(Query q, RowParser<T, TRow> p)
+        public Task<IQueryResult<T>> Run<T>(Query q, RowParser<T, TRow> p)
         {
             return Run(q, p, default);
         }
 
-        public async Task<IQueryResults<T>> Run<T>(Query q, RowParser<T, TRow> p, CancellationToken ct)
+        public async Task<IQueryResult<T>> Run<T>(Query q, RowParser<T, TRow> p, CancellationToken ct)
         {
             var c = await _connectionProvider();
-            return await Run(c, q, p, ct, async () => { await _connectionDisposer(c); });
+            return await RunInternal(c, q, p, ct, async () => { await _connectionDisposer(c); });
         }
 
-        internal Task<IQueryResults<T>> Run<T>(DbConnection c, Query q, RowParser<T, TRow> p, CancellationToken ct, Func<Task> onComplete)
+        internal Task<IQueryResult<T>> RunInternal<T>(DbConnection c, Query q, RowParser<T, TRow> p, CancellationToken ct, Func<Task> onComplete)
         {
             return RunAction(c, q, async cmd =>
             {
@@ -104,9 +91,55 @@ namespace SharperAnorm
             });
         }
 
-        protected abstract IQueryResults<T> Enumerate<T>(DbDataReader result, RowParser<T, TRow> parser, CancellationToken ct, Func<Task> onComplete);
+        protected abstract IQueryResult<T> Enumerate<T>(DbDataReader result, RowParser<T, TRow> parser, CancellationToken ct, Func<Task> onComplete);
 
         #endregion
+
+        #region Many Results, Many Rows
+
+        public Task<IQueryResultSet<TRow>> RunMany(Query q)
+        {
+            return RunMany(q, default);
+        }
+
+        public async Task<IQueryResultSet<TRow>> RunMany(Query q, CancellationToken ct)
+        {
+            var c = await _connectionProvider();
+            return await RunManyInternal(c, q, ct, async () => { await _connectionDisposer(c); });
+        }
+
+        internal Task<IQueryResultSet<TRow>> RunManyInternal(DbConnection c, Query q, CancellationToken ct, Func<Task> onComplete)
+        {
+            
+            return RunAction(c, q, async cmd =>
+            {
+                var result = await cmd.ExecuteReaderAsync(ct);
+
+                return EnumerateMany(result, ct, async () =>
+                {
+                    await result.DisposeAsync();
+                    await cmd.DisposeAsync();
+                    await onComplete();
+                });
+            });
+        }
+        
+        protected abstract IQueryResultSet<TRow> EnumerateMany(DbDataReader result, CancellationToken ct, Func<Task> onComplete);
+
+        #endregion
+
+        private async Task<T> WithConnection<T>(Func<DbConnection, Task<T>> f)
+        {
+            var c = await _connectionProvider();
+            try
+            {
+                return await f(c);
+            }
+            finally
+            {
+                await _connectionDisposer(c);
+            }
+        }
 
         private static async Task<T> RunAction<T>(DbConnection c, Query q, Func<DbCommand, Task<T>> action)
         {
