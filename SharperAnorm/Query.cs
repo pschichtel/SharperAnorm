@@ -36,11 +36,11 @@ namespace SharperAnorm
             var args = statement.GetArguments();
             var bindVars = new Dictionary<string, object>();
             var placeholders = new object[statement.ArgumentCount];
-            for (int i = 0; i < args.Length; ++i)
+            for (var i = 0; i < args.Length; ++i)
             {
-                var varName = "var_" + i;
+                var varName = "@var_" + i;
                 bindVars[varName] = args[i];
-                placeholders[i] = "@" + varName;
+                placeholders[i] = varName;
             }
 
             return new Query(string.Format(statement.Format, placeholders), bindVars);
