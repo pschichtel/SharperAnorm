@@ -1,4 +1,5 @@
 using System;
+using System.Data;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
@@ -11,7 +12,7 @@ using static SharperAnorm.DataReaderRowParser;
 namespace SharperAnormTest
 {
     [TestFixture]
-    public class RunnerTests
+    public class IntegrationTests
     {
         private int _connectionCounter;
         private Func<Task<DbConnection>> _provider;
@@ -112,7 +113,7 @@ namespace SharperAnormTest
 
             var parser = Integer(0).And(Integer(1)).And(Integer(2));
 
-            using (var results = await runner.Run(Query.Plain("SELECT a, b, c FROM test_table"), parser))
+            await using (var results = await runner.Run(Query.Plain("SELECT a, b, c FROM test_table"), parser))
             {
                 var ((a, b), c) = results.First();
                 Assert.That(a * b * c, Is.EqualTo(6));
@@ -133,7 +134,7 @@ namespace SharperAnormTest
 
             await runner.Transaction(async r =>
             {
-                using var results = await runner.Run(Query.Plain("SELECT a, b, c FROM test_table"), parser);
+                await using var results = await runner.Run(Query.Plain("SELECT a, b, c FROM test_table"), parser);
                 var sum = results.Select(row =>
                 {
                     var ((a, b), c) = row;
@@ -167,5 +168,38 @@ namespace SharperAnormTest
         //     Assert.That(sum, Is.EqualTo(240));
         //
         // }
+
+        [Test]
+        public async Task ManyResults()
+        {
+            var runner = new DataReaderRunner(_provider, _disposer);
+
+            await runner.RunNoResult(Query.Plain("CREATE TABLE test_table (a integer, b integer, c integer)"));
+            await runner.RunNoResult(Query.Plain("INSERT INTO test_table (a, b, c) VALUES (1, 2, 3), (2, 3, 4), (5, 6, 7)"));
+
+            var parser = Integer(0).And(Integer(1)).And(Integer(2));
+
+            var sum = await runner.Transaction(async r =>
+            {
+                int SumUp(IQueryResultSet<IDataRecord> resultSet)
+                {
+                    return resultSet.AllRecords(parser).Select(row =>
+                    {
+                        var ((a, b), c) = row;
+                        return a * b * c;
+                    }).Sum();
+                }
+                
+                await using var results = await runner.RunMany(Query.Plain("SELECT a, b, c FROM test_table; SELECT a * 3, b * 5, c * 7 FROM test_table"));
+                var sumA = SumUp(results);
+                Assert.That(await results.NextResult(), Is.True);
+                var sumB = SumUp(results);
+
+                return sumA + sumB;
+            });
+            
+            
+            Assert.That(sum, Is.EqualTo(25440));
+        }
     }
 }

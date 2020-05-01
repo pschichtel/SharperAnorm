@@ -8,14 +8,18 @@ using System.Threading.Tasks;
 
 namespace SharperAnorm
 {
-    public class DataReaderQueryResults<T> : IQueryResults<T>
+    public class DataReaderQueryResult<T> : IQueryResult<T>
     {
+        private readonly DbDataReader _reader;
         private readonly DataReaderParsingEnumerator<T> _enumerator;
 
-        public DataReaderQueryResults(DbDataReader reader, RowParser<T, IDataRecord> parser, CancellationToken ct, Func<Task> onComplete)
+        public DataReaderQueryResult(DbDataReader reader, RowParser<T, IDataRecord> parser, CancellationToken ct, Func<Task> onComplete)
         {
+            _reader = reader;
             _enumerator = new DataReaderParsingEnumerator<T>(reader, parser, ct, onComplete);
         }
+
+        public int AffectedRows => _reader.RecordsAffected;
 
         IEnumerator IEnumerable.GetEnumerator()
         {
