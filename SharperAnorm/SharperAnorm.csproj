@@ -13,8 +13,4 @@
         <PackageTags>sql</PackageTags>
     </PropertyGroup>
 
-    <ItemGroup>
-      <Compile Remove="DataRowParser.cs" />
-    </ItemGroup>
-
 </Project>
