@@ -11,6 +11,7 @@
         <RepositoryUrl>https://github.com/oxropy/SharperAnorm.git</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageTags>sql</PackageTags>
+        <PackageVersion>1.0.1</PackageVersion>
     </PropertyGroup>
 
 </Project>
