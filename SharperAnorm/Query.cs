@@ -5,7 +5,7 @@ using System.Linq;
 namespace SharperAnorm
 {
     /// <summary>
-    /// The class represents a database database query. Instance will typically be created using either on of the two
+    /// The class represents a database query. Instance will typically be created using one of the two
     /// available factory methods Plain(String) and Parameterized(FormattableString). Instances of this class are
     /// immutable and no interaction with the database is done, it is merely used to tie bind variables to statements,
     /// especially when used with string interpolation for queries with statically known bind variables.
@@ -27,9 +27,9 @@ namespace SharperAnorm
         /// Adds a bind variable to this query. The result will be q new Query instance with the new bind variable,
         /// while leaving the this object unchanged.
         /// </summary>
-        /// <param name="name">name of the bind variable (depending on the DB driver, it may be required to start with an @)</param>
-        /// <param name="value">The value to bind (may be null)</param>
-        /// <returns>A new Query instance with the new bind variable</returns>
+        /// <param name="name">The ame of the bind variable. Depending on the DB driver a leading @ could be necessary.</param>
+        /// <param name="value">The value to bind (may be null).</param>
+        /// <returns>A new Query instance with the new bind variable.</returns>
         public Query Bind(string name, object value)
         {
             var newParameters = new Dictionary<string, object>(Parameters) {[name] = value};
@@ -44,8 +44,8 @@ namespace SharperAnorm
         /// <summary>
         /// Wraps a plain SQL statement into a Query instance without any bind variables.
         /// </summary>
-        /// <param name="statement">The SQL statement. The statement may contain bind variables, which must be bound later on</param>
-        /// <returns>a Query instance wrapping the given SQL statement</returns>
+        /// <param name="statement">The SQL statement. The statement may contain bind variables, which must be bound later on.</param>
+        /// <returns>A Query instance wrapping the given SQL statement.</returns>
         public static Query Plain(string statement)
         {
             return new Query(statement, new Dictionary<string, object>());
@@ -54,8 +54,8 @@ namespace SharperAnorm
         /// <summary>
         /// Generates a parameterized SQL statement based on the given format string and adds bind variables for the applied arguments.
         /// </summary>
-        /// <param name="statement">The statement as a interpolated string</param>
-        /// <returns>a Query instance reflecting the given statement and bind values</returns>
+        /// <param name="statement">The statement as an interpolated string.</param>
+        /// <returns>A Query instance reflecting the given statement and bind values.</returns>
         public static Query Parameterized(FormattableString statement)
         {
             var args = statement.GetArguments();
