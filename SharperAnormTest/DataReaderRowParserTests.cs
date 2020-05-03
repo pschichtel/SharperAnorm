@@ -289,7 +289,7 @@ namespace SharperAnormTest
             var mock = new Mock<IDataRecord>();
             mock.Setup(dr => dr.GetString(IsAny<int>())).Throws(new IndexOutOfRangeException());
 
-            Assert.That(DataReaderRowParser.String(1).Map(t => t).Parse(mock.Object).Successful, Is.False);
+            Assert.That(DataReaderRowParser.String(1).Parse(mock.Object).Successful, Is.False);
         }
 
         [Test]

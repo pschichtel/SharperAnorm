@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlTypes;
+using System.Runtime.CompilerServices;
 
 namespace SharperAnorm
 {
@@ -21,16 +22,21 @@ namespace SharperAnorm
     {
         public static IMaybe<T> Nothing<T>()
         {
-            return new Nothing<T>();
+            return SharperAnorm.Nothing.GetInstance<T>();
         }
 
         public static IMaybe<T> Just<T>(T value)
         {
             return new Just<T>(value);
         }
+
+        public static IMaybe<T> OfNullable<T>(T value) where T: class
+        {
+            return value == null ? Nothing<T>() : Just(value);
+        }
     }
 
-    internal class Just<T> : IMaybe<T>, IEquatable<IMaybe<T>>, IEquatable<Just<T>>
+    internal class Just<T> : IMaybe<T>
     {
         public T Value { get; }
 
@@ -61,26 +67,11 @@ namespace SharperAnorm
             return Value;
         }
 
-        public bool Equals(IMaybe<T> other)
-        {
-            if (other is Nothing<T>)
-            {
-                return false;
-            }
-
-            return Equals((Just<T>) other);
-        }
-
-        public bool Equals(Just<T> other)
-        {
-            return EqualityComparer<T>.Default.Equals(Value, other.Value);
-        }
-
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (obj.GetType() != GetType()) return false;
             return Equals((Just<T>) obj);
         }
 
@@ -95,19 +86,23 @@ namespace SharperAnorm
         }
     }
 
-    internal struct Nothing<T> : IMaybe<T>, IEquatable<IMaybe<T>>, IEquatable<Nothing<T>>
+    internal class Nothing<T> : IMaybe<T>
     {
+        
         public T Value => throw new SqlNullValueException("Value was null");
         public bool Exists => false;
-        
+
+        internal Nothing()
+        {}
+
         public IMaybe<TR> FlatMap<TR>(Func<T, IMaybe<TR>> f)
         {
-            return new Nothing<TR>();
+            return Nothing.GetInstance<TR>();
         }
 
         public IMaybe<TR> Map<TR>(Func<T, TR> f)
         {
-            return new Nothing<TR>();
+            return Nothing.GetInstance<TR>();
         }
 
         public T GetOrElse(T alt)
@@ -120,19 +115,9 @@ namespace SharperAnorm
             return alt();
         }
 
-        public bool Equals(IMaybe<T> other)
-        {
-            return other is Nothing<T>;
-        }
-
-        public bool Equals(Nothing<T> other)
-        {
-            return true;
-        }
-
         public override bool Equals(object obj)
         {
-            return obj is Nothing<T> other && Equals(other);
+            return ReferenceEquals(this, obj);
         }
 
         public override int GetHashCode()
@@ -142,7 +127,17 @@ namespace SharperAnorm
 
         public override string ToString()
         {
-            return nameof(Nothing<T>);
+            return $"{nameof(Nothing<T>)}<{nameof(T)}>";
+        }
+    }
+
+    internal static class Nothing
+    {
+        private static readonly Nothing<object> Instance = new Nothing<object>();
+
+        internal static Nothing<TAs> GetInstance<TAs>()
+        {
+            return Unsafe.As<Nothing<TAs>>(Instance);
         }
     }
 }
