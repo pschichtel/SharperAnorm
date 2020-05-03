@@ -30,9 +30,14 @@ namespace SharperAnorm
             return new Just<T>(value);
         }
 
-        public static IMaybe<T> OfNullable<T>(T value) where T: class
+        public static IMaybe<T> Of<T>(T value) where T: class
         {
             return value == null ? Nothing<T>() : Just(value);
+        }
+
+        public static IMaybe<T> Of<T>(T? value) where T: struct
+        {
+            return value == null ? Nothing<T>() : Just((T) value);
         }
     }
 
@@ -72,7 +77,7 @@ namespace SharperAnorm
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != GetType()) return false;
-            return Equals((Just<T>) obj);
+            return Equals(((Just<T>) obj).Value, Value);
         }
 
         public override int GetHashCode()
@@ -83,6 +88,16 @@ namespace SharperAnorm
         public override string ToString()
         {
             return $"{nameof(Just<T>)}({Value})";
+        }
+
+        public static bool operator ==(Just<T> left, IMaybe<T> right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(Just<T> left, IMaybe<T> right)
+        {
+            return !(left == right);
         }
     }
 
@@ -117,7 +132,9 @@ namespace SharperAnorm
 
         public override bool Equals(object obj)
         {
-            return ReferenceEquals(this, obj);
+            if (obj == null) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return GetType().GUID == obj.GetType().GUID;
         }
 
         public override int GetHashCode()
@@ -129,6 +146,16 @@ namespace SharperAnorm
         {
             return $"{nameof(Nothing<T>)}<{nameof(T)}>";
         }
+
+        public static bool operator ==(Nothing<T> left, IMaybe<T> right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(Nothing<T> left, IMaybe<T> right)
+        {
+            return !(left == right);
+        }
     }
 
     internal static class Nothing
@@ -137,7 +164,7 @@ namespace SharperAnorm
 
         internal static Nothing<TAs> GetInstance<TAs>()
         {
-            return Unsafe.As<Nothing<TAs>>(Instance);
+            return new Nothing<TAs>();
         }
     }
 }
