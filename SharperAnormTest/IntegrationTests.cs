@@ -212,5 +212,64 @@ namespace SharperAnormTest
 
             Assert.That(updatedName, Is.EqualTo("b"));
         }
+
+        [Test]
+        public async Task MultipleSingleResults()
+        {
+            var runner = new DataReaderRunner(_provider, _disposer);
+
+            await using var results = await runner.RunMany(Query.Plain("SELECT 1; SELECT 2; SELECT 3"));
+
+            Assert.That(await results.SingleRecord(Integer(0)), Is.EqualTo(1));
+            await results.NextResult();
+            Assert.That(await results.SingleRecord(Integer(0)), Is.EqualTo(2));
+            await results.NextResult();
+            Assert.That(await results.SingleRecord(Integer(0)), Is.EqualTo(3));
+        }
+
+        [Test]
+        public async Task EnumeratorReset()
+        {
+            var runner = new DataReaderRunner(_provider, _disposer);
+
+            await using var result = await runner.Run(Query.Plain("SELECT 1"), Integer(0));
+            using var enumerator = result.GetEnumerator();
+            Assert.IsTrue(enumerator.MoveNext());
+            Assert.AreEqual(enumerator.Current, 1);
+            Assert.IsFalse(enumerator.MoveNext());
+            Assert.Throws<NotSupportedException>(() => enumerator.Reset());
+        }
+
+        [Test]
+        public async Task AsyncEnumerator()
+        {
+            var runner = new DataReaderRunner(_provider, _disposer);
+
+            await using var result = await runner.Run(Query.Plain("SELECT 1"), Integer(0));
+            await using var enumerator = result.GetAsyncEnumerator();
+            Assert.IsTrue(await enumerator.MoveNextAsync());
+            Assert.AreEqual(enumerator.Current, 1);
+            Assert.IsFalse(await enumerator.MoveNextAsync());
+        }
+
+        [Test]
+        public async Task RunSingleWithNotSingleResult()
+        {
+            var runner = new DataReaderRunner(_provider, _disposer);
+
+            await runner.RunNoResult(Query.Plain("CREATE TABLE test_table (a integer)"));
+            
+            Assert.Throws<DataException>(() =>
+            {
+                runner.RunSingle(Query.Plain("SELECT a FROM test_table"), Integer(0)).GetAwaiter().GetResult();
+            });
+            
+            await runner.RunNoResult(Query.Plain("INSERT INTO test_table (a) VALUES (1), (2)"));
+            
+            Assert.Throws<DataException>(() =>
+            {
+                runner.RunSingle(Query.Plain("SELECT a FROM test_table"), Integer(0)).GetAwaiter().GetResult();
+            });
+        }
     }
 }

@@ -26,6 +26,9 @@ namespace SharperAnormTest
             Assert.That(Maybe.Just("b"), Is.Not.EqualTo(justA));
             Assert.That(Maybe.Just<object>("b"), Is.Not.EqualTo(justA));
             Assert.That(Maybe.Nothing<string>(), Is.Not.EqualTo(justA));
+            Assert.True(justA.Equals(justA));
+            
+            Assert.That(Maybe.Just("a").ToString(), Is.EqualTo("Just(a)"));
             
             Assert.That(justA.GetHashCode(), Is.EqualTo(justA.Value.GetHashCode()));
             
@@ -52,7 +55,10 @@ namespace SharperAnormTest
             Assert.That(nothing, Is.EqualTo(nothing));
             Assert.That(Maybe.Nothing<object>(), Is.EqualTo(nothing));
             Assert.That(Maybe.Nothing<string>(), Is.EqualTo(nothing));
-            Assert.That(Maybe.Just("a"), Is.Not.EqualTo(nothing));
+            Assert.That(Maybe.Just("a").ToString(), Is.Not.EqualTo(nothing));
+            Assert.True(nothing.Equals(nothing));
+            
+            Assert.That(Maybe.Nothing<string>().ToString(), Is.EqualTo("Nothing"));
             
             Assert.That(Maybe.Nothing<int>().GetHashCode(), Is.EqualTo(Maybe.Of<string>(null).GetHashCode()));
             

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FsCheck;
 using NUnit.Framework;
 using SharperAnorm;
 using Is = NUnit.Framework.Is;
@@ -19,6 +20,16 @@ namespace SharperAnormTest
             {
                 ["var_0"] = "a"
             }));
+        }
+
+        [FsCheck.NUnit.Property]
+        public Property ManualBinding(string name, string value)
+        {
+            var variable = $"@{name}";
+            var q = Query.Plain($"SELECT {variable}")
+                .Bind(variable, value);
+
+            return Equals(q.Parameters[variable], value).ToProperty();
         }
     }
 }

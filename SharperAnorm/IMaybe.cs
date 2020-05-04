@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlTypes;
-using System.Runtime.CompilerServices;
 
 namespace SharperAnorm
 {
@@ -22,7 +21,7 @@ namespace SharperAnorm
     {
         public static IMaybe<T> Nothing<T>()
         {
-            return SharperAnorm.Nothing.GetInstance<T>();
+            return new Nothing<T>();
         }
 
         public static IMaybe<T> Just<T>(T value)
@@ -89,16 +88,6 @@ namespace SharperAnorm
         {
             return $"{nameof(Just<T>)}({Value})";
         }
-
-        public static bool operator ==(Just<T> left, IMaybe<T> right)
-        {
-            return Equals(left, right);
-        }
-
-        public static bool operator !=(Just<T> left, IMaybe<T> right)
-        {
-            return !(left == right);
-        }
     }
 
     internal class Nothing<T> : IMaybe<T>
@@ -107,17 +96,14 @@ namespace SharperAnorm
         public T Value => throw new SqlNullValueException("Value was null");
         public bool Exists => false;
 
-        internal Nothing()
-        {}
-
         public IMaybe<TR> FlatMap<TR>(Func<T, IMaybe<TR>> f)
         {
-            return Nothing.GetInstance<TR>();
+            return new Nothing<TR>();
         }
 
         public IMaybe<TR> Map<TR>(Func<T, TR> f)
         {
-            return Nothing.GetInstance<TR>();
+            return new Nothing<TR>();
         }
 
         public T GetOrElse(T alt)
@@ -144,27 +130,7 @@ namespace SharperAnorm
 
         public override string ToString()
         {
-            return $"{nameof(Nothing<T>)}<{nameof(T)}>";
-        }
-
-        public static bool operator ==(Nothing<T> left, IMaybe<T> right)
-        {
-            return Equals(left, right);
-        }
-
-        public static bool operator !=(Nothing<T> left, IMaybe<T> right)
-        {
-            return !(left == right);
-        }
-    }
-
-    internal static class Nothing
-    {
-        private static readonly Nothing<object> Instance = new Nothing<object>();
-
-        internal static Nothing<TAs> GetInstance<TAs>()
-        {
-            return new Nothing<TAs>();
+            return nameof(Nothing<T>);
         }
     }
 }
