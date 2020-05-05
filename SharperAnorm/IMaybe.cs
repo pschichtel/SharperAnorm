@@ -28,9 +28,19 @@ namespace SharperAnorm
         {
             return new Just<T>(value);
         }
+
+        public static IMaybe<T> Of<T>(T value) where T: class
+        {
+            return value == null ? Nothing<T>() : Just(value);
+        }
+
+        public static IMaybe<T> Of<T>(T? value) where T: struct
+        {
+            return value == null ? Nothing<T>() : Just((T) value);
+        }
     }
 
-    internal class Just<T> : IMaybe<T>, IEquatable<IMaybe<T>>, IEquatable<Just<T>>
+    internal class Just<T> : IMaybe<T>
     {
         public T Value { get; }
 
@@ -61,27 +71,12 @@ namespace SharperAnorm
             return Value;
         }
 
-        public bool Equals(IMaybe<T> other)
-        {
-            if (other is Nothing<T>)
-            {
-                return false;
-            }
-
-            return Equals((Just<T>) other);
-        }
-
-        public bool Equals(Just<T> other)
-        {
-            return EqualityComparer<T>.Default.Equals(Value, other.Value);
-        }
-
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((Just<T>) obj);
+            if (obj.GetType() != GetType()) return false;
+            return Equals(((Just<T>) obj).Value, Value);
         }
 
         public override int GetHashCode()
@@ -95,11 +90,12 @@ namespace SharperAnorm
         }
     }
 
-    internal struct Nothing<T> : IMaybe<T>, IEquatable<IMaybe<T>>, IEquatable<Nothing<T>>
+    internal class Nothing<T> : IMaybe<T>
     {
+        
         public T Value => throw new SqlNullValueException("Value was null");
         public bool Exists => false;
-        
+
         public IMaybe<TR> FlatMap<TR>(Func<T, IMaybe<TR>> f)
         {
             return new Nothing<TR>();
@@ -120,19 +116,11 @@ namespace SharperAnorm
             return alt();
         }
 
-        public bool Equals(IMaybe<T> other)
-        {
-            return other is Nothing<T>;
-        }
-
-        public bool Equals(Nothing<T> other)
-        {
-            return true;
-        }
-
         public override bool Equals(object obj)
         {
-            return obj is Nothing<T> other && Equals(other);
+            if (obj == null) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return GetType().GUID == obj.GetType().GUID;
         }
 
         public override int GetHashCode()
