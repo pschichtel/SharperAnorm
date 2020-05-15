@@ -8,7 +8,7 @@ namespace SharperAnorm
         private readonly Func<T> _f;
         private readonly Mutex _lock = new Mutex();
         private bool _completed;
-        private T _result;
+        private T _result = default!;
 
         public CallOnce(Func<T> f)
         {

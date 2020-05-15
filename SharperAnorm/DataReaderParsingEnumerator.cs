@@ -50,7 +50,7 @@ namespace SharperAnorm
             throw new NotSupportedException();
         }
 
-        object IEnumerator.Current => Current;
+        object? IEnumerator.Current => Current;
 
         public void Dispose()
         {
