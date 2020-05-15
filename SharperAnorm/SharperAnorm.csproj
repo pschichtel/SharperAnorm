@@ -7,11 +7,12 @@
         <Authors>Alexander Pollich, Phillip Schichtel</Authors>
         <Description>An Anorm-inspired library for database access with simple immutable objects.</Description>
         <PackageProjectUrl>https://github.com/oxropy/SharperAnorm</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/oxropy/SharperAnorm/blob/master/LICENSE</PackageLicenseUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/oxropy/SharperAnorm.git</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageTags>sql</PackageTags>
         <PackageVersion>1.0.1</PackageVersion>
+        <Nullable>enable</Nullable>
     </PropertyGroup>
 
 </Project>

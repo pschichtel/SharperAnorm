@@ -36,7 +36,7 @@ namespace SharperAnorm
 
         public IQueryResult<T> AllRecords<T>(RowParser<T, IDataRecord> parser)
         {
-            return new DataReaderQueryResult<T>(_reader, parser, _ct, async () => { });
+            return new DataReaderQueryResult<T>(_reader, parser, _ct, () => Task.CompletedTask);
         }
 
         public void Dispose()

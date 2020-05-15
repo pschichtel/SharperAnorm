@@ -15,9 +15,9 @@ namespace SharperAnorm
         private static string VariablePrefix = "@";
         
         public string Statement { get; }
-        public IDictionary<string, object> Parameters { get; }
+        public IDictionary<string, object?> Parameters { get; }
 
-        private Query(string statement, IDictionary<string, object> parameters)
+        private Query(string statement, IDictionary<string, object?> parameters)
         {
             Statement = statement;
             Parameters = parameters;
@@ -32,7 +32,7 @@ namespace SharperAnorm
         /// <returns>A new Query instance with the new bind variable.</returns>
         public Query Bind(string name, object value)
         {
-            var newParameters = new Dictionary<string, object>(Parameters) {[name] = value};
+            var newParameters = new Dictionary<string, object?>(Parameters) {[name] = value};
             return new Query(Statement, newParameters);
         }
 
@@ -48,7 +48,7 @@ namespace SharperAnorm
         /// <returns>A Query instance wrapping the given SQL statement.</returns>
         public static Query Plain(string statement)
         {
-            return new Query(statement, new Dictionary<string, object>());
+            return new Query(statement, new Dictionary<string, object?>());
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace SharperAnorm
         public static Query Parameterized(FormattableString statement)
         {
             var args = statement.GetArguments();
-            var bindVars = new Dictionary<string, object>();
+            var bindVars = new Dictionary<string, object?>();
             var placeholders = new object[statement.ArgumentCount];
             for (var i = 0; i < args.Length; ++i)
             {

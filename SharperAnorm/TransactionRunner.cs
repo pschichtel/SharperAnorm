@@ -44,7 +44,7 @@ namespace SharperAnorm
 
         public Task<IQueryResult<T>> Run<T>(Query q, RowParser<T, TRow> p, CancellationToken ct)
         {
-            return _runner.RunInternal(_connection, q, p, ct, async () => { });
+            return _runner.RunInternal(_connection, q, p, ct, () => Task.CompletedTask);
         }
 
         public Task<IQueryResultSet<TRow>> RunMany(Query q)
@@ -54,7 +54,7 @@ namespace SharperAnorm
 
         public Task<IQueryResultSet<TRow>> RunMany(Query q, CancellationToken ct)
         {
-            return _runner.RunManyInternal(_connection, q, ct, async () => { });
+            return _runner.RunManyInternal(_connection, q, ct, () => Task.CompletedTask);
         }
     }
 }
