@@ -50,6 +50,11 @@ namespace SharperAnorm
         {
             return onSuccess(Value);
         }
+
+        public void Deconstruct(out T value)
+        {
+            value = Value;
+        }
     }
 
     internal class RowParserError<T> : RowParserResult<T>

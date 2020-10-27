@@ -88,6 +88,11 @@ namespace SharperAnorm
         {
             return $"{nameof(Just<T>)}({Value})";
         }
+
+        public void Deconstruct(out T value)
+        {
+            value = Value;
+        }
     }
 
     internal class Nothing<T> : IMaybe<T>
